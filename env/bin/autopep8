@@ -1,5 +1,5 @@
 #!/bin/sh
-'''exec' "/run/media/maynorp/Esencial/Agrega/Metricas ITO/env/bin/python" "$0" "$@"
+'''exec' "/run/media/maynorp/Esencial/Agrega/Metricas ITO/env/bin/python3" "$0" "$@"
 ' '''
 # -*- coding: utf-8 -*-
 import re

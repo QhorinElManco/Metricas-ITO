@@ -21,16 +21,23 @@ def getHosts(hostid=''):
 # OBTENER LOS EVENTOS DEL HOST
 
 
+# FECHA DINAMICA
 currentDate = currentDate()
 previewMonth = lastMonth(currentDate)
 currentDate = dateUnix(currentDate)
 previewMonth = dateUnix(previewMonth)
 
+# FECHA ESTATICA
+# new_date = datetime(currentDate().year, currentDate().month, 1, 00, 00, 00, 00000)
+# old_date = lastMonth(new_date)
+# new_date = dateUnix(new_date)
+# old_date = dateUnix(old_date)
+
 
 def getEvents(hostid):
     events = zabbix.event.get(output=('eventid', 'clock', 'r_eventid'), hostids=hostid,
                               select_acknowledges=('clock'),
-                              #time_from=previewMonth, time_till=currentDate,
+                              # time_from=previewMonth, time_till=currentDate,
                               filter={'name': 'Unavailable by ICMP ping'},
                               sortfield='clock', sortorder='ASC')
     return events
@@ -57,24 +64,19 @@ for host in hosts:
             metrica = metricas2(events, int(hini), int(hend))
         else:
             metrica = metricas(events)
-        print(f'''Hostname: {host["host"]} con hostid: {host["hostid"]}
-               MTTD: {metrica['MTTD']}
-               MTTA: {metrica['MTTA']}
-               MTTR: {metrica['MTTR']}
-               MTBF: {metrica['MTBF']}
-               ''')
         # ITEM PARA MTTD
         items = zabbix.item.get(
-            filter={'name': 'metrica.'+host['host']+'.mttd'})
+            filter={'key_': 'metrica.'+host['host']+'.mttd'})
         if len(items) != 0:
             item = zabbix.item.update(itemid=items[0]['itemid'],
                                       description=f'''Hostname: {host["host"]} con hostid: {host["hostid"]}
                                         MTTD: {metrica['MTTD']['MTTD']}, 
                                         INCIDENCIAS: {metrica['MTTD']['INCIDENCIAS']}, 
                                         TIEMPO: {metrica['MTTD']['TIEMPO']}
+                                        FECHA REPORTE: {currentDate}
                                         ''')
         else:
-            item1 = zabbix.item.create(hostid=host['hostid'], name='metrica.'+host['host']+'.mttd',
+            item1 = zabbix.item.create(hostid=host['hostid'], name='Metrica MTTD',
                                        key_='metrica.'+host['host']+'.mttd', type=2,
                                        value_type=0, interfaceid=host["interfaces"][0]["interfaceid"],
                                        units='mins',
@@ -84,20 +86,22 @@ for host in hosts:
                                         MTTD: {metrica['MTTD']['MTTD']}, 
                                         INCIDENCIAS: {metrica['MTTD']['INCIDENCIAS']}, 
                                         TIEMPO: {metrica['MTTD']['TIEMPO']}
+                                        FECHA REPORTE: {currentDate}
                                         ''',
-                                       delay=3600)
+                                       delay="1s")
         # ITEM PARA MTTA
         items = zabbix.item.get(output="itemid",
-                                filter={'name': 'metrica.'+host['host']+'.mtta'})
+                                filter={'key_': 'metrica.'+host['host']+'.mtta'})
         if len(items) != 0:
             item = zabbix.item.update(itemid=items[0]['itemid'],
                                       description=f'''Hostname: {host["host"]} con hostid: {host["hostid"]}
                                         MTTA: {metrica['MTTA']['MTTA']}, 
                                         INCIDENCIAS: {metrica['MTTA']['INCIDENCIAS']}, 
                                         TIEMPO AL ACKNOWLEDGE: {metrica['MTTA']['TIEMPO AL ACKNOWLEDGE']}
+                                        FECHA REPORTE: {currentDate}
                                         ''')
         else:
-            item1 = zabbix.item.create(hostid=host['hostid'], name='metrica.'+host['host']+'.mtta',
+            item1 = zabbix.item.create(hostid=host['hostid'], name='Metrica MTTA',
                                        key_='metrica.'+host['host']+'.mtta', type=2,
                                        value_type=0, interfaceid=host["interfaces"][0]["interfaceid"],
                                        units='mins',
@@ -106,21 +110,23 @@ for host in hosts:
                                        description=f'''Hostname: {host["host"]} con hostid: {host["hostid"]}
                                         MTTA: {metrica['MTTA']['MTTA']}, 
                                         INCIDENCIAS: {metrica['MTTA']['INCIDENCIAS']}, 
-                                        TIEMPO AL ACKNOWLEDGE: {metrica['MTTA']['TIEMPO AL ACKNOWLEDGE']}  
+                                        TIEMPO AL ACKNOWLEDGE: {metrica['MTTA']['TIEMPO AL ACKNOWLEDGE']}
+                                        FECHA REPORTE: {currentDate}
                                         ''',
-                                       delay=3600)
+                                       delay="1s")
         # ITEM PARA MTTR
         items = zabbix.item.get(
-            filter={'name': 'metrica.'+host['host']+'.mttr'})
+            filter={'key_': 'metrica.'+host['host']+'.mttr'})
         if len(items) != 0:
             item = zabbix.item.update(itemid=items[0]['itemid'],
                                       description=f'''Hostname: {host["host"]} con hostid: {host["hostid"]}
                                         MTTR: {metrica['MTTR']['MTTR']}, 
                                         INCIDENCIAS: {metrica['MTTR']['INCIDENCIAS']}, 
                                         TIEMPO TOTAL DE REPARACION: {metrica['MTTR']['TIEMPO']}
+                                        FECHA REPORTE: {currentDate}
                                         ''')
         else:
-            item1 = zabbix.item.create(hostid=host['hostid'], name='metrica.'+host['host']+'.mttr',
+            item1 = zabbix.item.create(hostid=host['hostid'], name='Metrica MTTR',
                                        key_='metrica.'+host['host']+'.mttr', type=2,
                                        value_type=0, interfaceid=host["interfaces"][0]["interfaceid"],
                                        units='mins',
@@ -130,22 +136,23 @@ for host in hosts:
                                         MTTR: {metrica['MTTR']['MTTR']}, 
                                         INCIDENCIAS: {metrica['MTTR']['INCIDENCIAS']}, 
                                         TIEMPO TOTAL DE REPARACION: {metrica['MTTR']['TIEMPO']}
+                                        FECHA REPORTE: {currentDate}
                                         ''',
-                                       delay=3600)
+                                       delay="1s")
         # ITEM PARA MTBF
         items = zabbix.item.get(
-            filter={'name': 'metrica.'+host['host']+'.mtbf'})
+            filter={'key_': 'metrica.'+host['host']+'.mtbf'})
         if len(items) != 0:
             item = zabbix.item.update(itemid=items[0]['itemid'],
                                       description=f'''Hostname: {host["host"]} con hostid: {host["hostid"]}
                                         MTBF: {metrica['MTBF']['MTBF']}, 
                                         INCIDENCIAS: {metrica['MTBF']['INCIDENCIAS']}, 
                                         TIEMPO TOTAL DISPONIBLE: {metrica['MTBF']['TIEMPO TOTAL DISPONIBLE']}                
-                                        TIEMPO INACTIVO: {metrica['MTBF']['TIEMPO INACTIVO']}      
-                                        HOLA
+                                        TIEMPO INACTIVO: {metrica['MTBF']['TIEMPO INACTIVO']}
+                                        FECHA REPORTE: {currentDate}
                                         ''')
         else:
-            item1 = zabbix.item.create(hostid=host['hostid'], name='metrica.'+host['host']+'.mtbf',
+            item1 = zabbix.item.create(hostid=host['hostid'], name='Metrica MTBF',
                                        key_='metrica.'+host['host']+'.mtbf', type=2,
                                        value_type=0, interfaceid=host["interfaces"][0]["interfaceid"],
                                        units='mins',
@@ -155,10 +162,14 @@ for host in hosts:
                                         MTBF: {metrica['MTBF']['MTBF']}, 
                                         INCIDENCIAS: {metrica['MTBF']['INCIDENCIAS']}, 
                                         TIEMPO TOTAL DISPONIBLE: {metrica['MTBF']['TIEMPO TOTAL DISPONIBLE']}                
-                                        TIEMPO INACTIVO: {metrica['MTBF']['TIEMPO INACTIVO']}      
+                                        TIEMPO INACTIVO: {metrica['MTBF']['TIEMPO INACTIVO']}
+                                        FECHA REPORTE: {currentDate}
                                         ''',
-                                       delay=3600)
+                                       delay="1s")
         # CREACION Y ENVIO DE METRICAS
+        time.sleep(60)
+        #PORT = int(os.environ.get("PORT_ZABBIX"))
+        #IP = os.environ.get("IP")
         packet = [
             ZabbixMetric(host['host'], 'metrica.' +
                          host['host']+'.mttd', metrica['MTTD']['MTTD']),
@@ -171,6 +182,9 @@ for host in hosts:
         ]
         result = ZabbixSender(
             zabbix_server='190.5.99.234', zabbix_port=10051).send(packet)
+        print(f"Metricas para el host: {host['host']} han sido calculadas")
+        print(result)
     else:
         print(
             f'No hay incidencias en host: {host["host"]} con hostid: {host["hostid"]}')
+zabbix.user.logout()

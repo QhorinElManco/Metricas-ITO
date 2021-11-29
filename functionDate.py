@@ -9,7 +9,10 @@ formatTime = '%Y-%m-%d %H:%M:%S'
 
 
 def formatDate(date):
-    return datetime.strptime(datetime.fromtimestamp(int(date)).strftime(formatTime), formatTime)
+    date = datetime.strptime(datetime.fromtimestamp(
+        int(date)).strftime(formatTime), formatTime)
+    date = date - relativedelta(hours=6)
+    return date
 
 # Funcion para castear a formato unixtime
 
@@ -21,7 +24,11 @@ def dateUnix(date):
 
 
 def currentDate():
-    return datetime.strptime(datetime.now().strftime(formatTime), formatTime)
+    date = datetime.strptime(datetime.utcnow()
+                             .strftime(formatTime), formatTime)
+    date = date - relativedelta(hours=6)
+    return date
+
 
 # Funcion para obtener el mes anterior a partir de la una fecha
 # por defecto la calcula con la fecha actual
