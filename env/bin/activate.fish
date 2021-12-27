@@ -30,7 +30,7 @@ end
 # Unset irrelevant variables.
 deactivate nondestructive
 
-set -gx VIRTUAL_ENV "/run/media/maynorp/Esencial/Agrega/Metricas ITO/env"
+set -gx VIRTUAL_ENV "/run/media/maynorp/Esencial/Agrega/Metricas ITO Local/env"
 
 set -gx _OLD_VIRTUAL_PATH $PATH
 set -gx PATH "$VIRTUAL_ENV/bin" $PATH

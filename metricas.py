@@ -1,145 +1,95 @@
-
 from functionDate import *
+from zabbix import zabbix
 
-# FUNCION PARA METRICAS CON HORARIO 24/7
 
+def metricas(events, startDate, finalDate):
+    data = {'failures': 0, 'inactive': 0,
+            'available': 0, 'timeAck': 0}
+    data['available'] = round(dateDifference(startDate, finalDate), 1)
 
-def metricas(events):
-    minsInactive = 0
-    minsAck = 0
-    numberEvents = 0
-    numberAck = 0
-    firstEvent = ''
-    lastEvent = ''
-    mttd = 0
-    mtta = 0
-    mttr = 0
-    mtbf = 0
-    metricas = {'MTTD': {}, 'MTTA': {}, 'MTTR': {}, 'MTBF': {}}
-    for event in events:
-        if event['r_eventid'] != '0':
-            hourResolve = ''
-            for eventResolve in events:
-                if eventResolve['eventid'] == event['r_eventid']:
-                    hourResolve = eventResolve['clock']
-                    break
+    # SI HAY EVENTOS CALCULA LAS METRICAS
+    if len(events) != 0:
+        for event in events:
+
+            # HORA DE PROBLEMA
             hourProblem = formatDate(event['clock'])
-            hourResolve = formatDate(hourResolve)
-            minsInactive += dateDifference(hourProblem, hourResolve)
-            numberEvents += 1
-        # DATOS PARA MTTA
-        if len(event['acknowledges']) != 0:
-            hourProblem = formatDate(event['clock'])
-            hourAck = event['acknowledges'][0]['clock']
-            hourAck = formatDate(hourAck)
-            minsAck += dateDifference(hourProblem, hourAck)
-            numberAck += 1
+            data['failures'] += 1
 
-    # MTTD
-    if minsInactive != 0:
-        mttd = round(numberEvents/minsInactive, 6)
-    metricas['MTTD'] = {'INCIDENCIAS': numberEvents,
-                        'TIEMPO': round(minsInactive, 2), 'MTTD': mttd}
+            # SI EL EVENTO FUE SOLUCIONADO OBTENEMOS EL EVENTO DE RESOLUCION
+            if event['r_eventid'] != '0':
 
-    # MTTA
-    if numberAck != 0:
-        mtta = round(minsAck/numberAck, 2)
-    metricas['MTTA'] = {'INCIDENCIAS': numberAck,
-                        'TIEMPO AL ACKNOWLEDGE': round(minsAck, 2), 'MTTA': mtta}
+                # OBTENER EVENTO DE RESOLUCIÓN
+                eventResolve = zabbix.event.get(
+                    output=('eventid', 'clock'), eventids=event['r_eventid'])
 
-    # MTTR
-    if numberEvents != 0:
-        mttr = round(minsInactive/numberEvents, 2)
-    metricas['MTTR'] = {'INCIDENCIAS': numberEvents,
-                        'TIEMPO': round(minsInactive, 2), 'MTTR': mttr}
+                # HORA DE RESOLUCION
+                hourResolve = formatDate(eventResolve[0]['clock'])
 
-    # MTBF
-    firstEvent = formatDate(events[0]['clock'])
-    lastEvent = formatDate(events[len(events) - 1]['clock'])
-    timeAvailable = dateDifference(firstEvent, lastEvent)
-    mtbf = round((timeAvailable-minsInactive)/numberEvents, 2)
-    metricas['MTBF'] = {'INCIDENCIAS': numberEvents,
-                        'TIEMPO TOTAL DISPONIBLE': round(timeAvailable, 2), 'TIEMPO INACTIVO': round(minsInactive, 2), 'MTBF': mtbf}
+                # CASO 1
+                if finalDate > hourProblem >= startDate and hourResolve > finalDate:
+                    data['inactive'] += dateDifference(hourProblem, finalDate)
+                    inactive = dateDifference(hourProblem, finalDate)
+                    caso = 1
+                # CASO 2
+                elif finalDate > hourResolve >= startDate and startDate > hourProblem:
+                    data['inactive'] += dateDifference(startDate, hourResolve)
+                    inactive = dateDifference(startDate, hourResolve)
+                    caso = 2
+                # CASO 3
+                elif startDate > hourProblem and hourResolve > finalDate:
+                    data['inactive'] += dateDifference(startDate, finalDate)
+                    inactive = dateDifference(startDate, finalDate)
+                    caso = 3
+                # CASO 4
+                elif finalDate > hourProblem >= startDate and finalDate > hourResolve >= startDate:
+                    data['inactive'] += dateDifference(
+                        hourProblem, hourResolve)
+                    inactive = dateDifference(hourProblem, hourResolve)
+                    caso = 4
 
-    return metricas
+            # AUN NO TIENE RESOLUCIÓN
+            else:
+                hourResolve = "No resuelto aún"
+                # EL PROBLEMA INICIÓ ANTES DEL MES A PROCESAR?
+                if hourProblem < startDate:
+                    data['inactive'] += dateDifference(startDate, finalDate)
+                    inactive = dateDifference(startDate, finalDate)
+                    caso = 6
+                else:
+                    data['inactive'] += dateDifference(hourProblem, finalDate)
+                    inactive = dateDifference(hourProblem, finalDate)
+                    caso = 7
 
-# FUNCION PARA VERIFICAR EL HORARIO L-V DE 8-5
+            #print(f'''
+            #NUEVO EVENTO
+            #-Caso problema: {caso}
+            #-Falla el: {hourProblem}
+            #-Resolucion el: {hourResolve}''')
 
+            # SI EL PROBLEMA TIENE ESTADO ACKNOWLEDGE
+            if len(event['acknowledges']) != 0:
+                # HORA DEL ACKNOWLEDGE
+                hourAck = formatDate(event['acknowledges'][0]['clock'])
 
-def validateDate(clock, hini, hend):
-    days = ('Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday')
-    day = formatDate(clock)
-    if (day.strftime('%A') in days) and hini <= day.hour <= hend:
-        return True
-    else:
-        return False
+                data['timeAck'] += dateDifference(hourProblem, hourAck)
+                ack = dateDifference(hourProblem, hourAck)
+                casoAck = 6
 
-# FUNCION PARA METRICAS CON HORARIO 8/5 (L-V Y 8AM-5PM)
+            # AUN NO TIENE ACKNOWLEDGE
+            else:
+                hourAck = "Sin acknowledge"
 
+                data['timeAck'] += dateDifference(hourProblem, finalDate)
+                ack = dateDifference(hourProblem, finalDate)
+                casoAck = 8
+            #print(f'''
+            #      -Caso acknowlegde: {casoAck}
+            #      -Acknowlegde: {hourAck}
+            #      -Inactivo: {inactive}
+            #      -Tiempo al acknowledge: {ack}
+            #      
+            #      ''')
+        data['inactive'] = round(data['inactive'], 1)
+        data['timeAck'] = round(data['timeAck'], 1)
 
-def metricas2(events, hini, hend):
-    minsInactive = 0
-    minsAck = 0
-    numberEvents = 0
-    numberAck = 0
-    firstEvent = ''
-    lastEvent = ''
-    mttd = 0
-    mtta = 0
-    mttr = 0
-    mtbf = 0
-    metricas = {'MTTD': {}, 'MTTA': {}, 'MTTR': {}, 'MTBF': {}}
-    for event in events:
-        # VERIFICAMOS QUE SEA UN PROBLEMA Y QUE ESTE DENTRO DEL HORARIO ESTABLECIDO
-        if event['r_eventid'] != '0' and validateDate(event['clock'], hini, hend):
-            # OBTENEMOS EL PRIMER PROBLEMA /// IMPORTANTE PARA MTBF
-            if firstEvent == '':
-                firstEvent = formatDate(event['clock'])
-            hourResolve = ''
-            # BUSCAMOS EL EVENTO DE LA SOLUCION
-            for eventResolve in events:
-                if eventResolve['eventid'] == event['r_eventid']:
-                    hourResolve = eventResolve['clock']
-                    break
-            hourProblem = formatDate(event['clock'])
-            hourResolve = formatDate(hourResolve)
-            minsInactive += dateDifference(hourProblem, hourResolve)
-            numberEvents += 1
-            # GUARDAMOS EL ULTIMO EVENTO DENTRO DEL HORARIO ESTABLECIDO
-            lastEvent = formatDate(event['clock'])
-        # DATOS PARA MTTA
-        # VERIFICAMOS QUE SEA UN PROBLEMA CON UN ACK Y QUE ESTE DENTRO DEL HORARIO ESTABLECIDO
-        if (len(event['acknowledges']) != 0) and validateDate(event['clock'], hini, hend):
-            # OBTENEMOS LA HORA EN QUE SE PRODUJO EL ACKNOWLEDGE
-            hourProblem = formatDate(event['clock'])
-            hourAck = event['acknowledges'][0]['clock']
-            hourAck = formatDate(hourAck)
-            minsAck += dateDifference(hourProblem, hourAck)
-            numberAck += 1
-
-    # MTTD
-    if minsInactive != 0:
-        mttd = round(numberEvents/minsInactive, 6)
-    metricas['MTTD'] = {'INCIDENCIAS': numberEvents,
-                        'TIEMPO': round(minsInactive, 2), 'MTTD': mttd}
-
-    # MTTA
-    if numberAck != 0:
-        mtta = round(minsAck/numberAck, 2)
-    metricas['MTTA'] = {'INCIDENCIAS': numberAck,
-                        'TIEMPO AL ACKNOWLEDGE': round(minsAck, 2), 'MTTA': mtta}
-
-    # MTTR
-    if numberEvents != 0:
-        mttr = round(minsInactive/numberEvents, 2)
-    metricas['MTTR'] = {'INCIDENCIAS': numberEvents,
-                        'TIEMPO': round(minsInactive, 2), 'MTTR': mttr}
-
-    # MTBF
-    lastEvent = formatDate(events[len(events) - 1]['clock'])
-    timeAvailable = dateDifference(firstEvent, lastEvent)
-    mtbf = round((timeAvailable-minsInactive)/numberEvents, 2)
-    metricas['MTBF'] = {'INCIDENCIAS': numberEvents,
-                        'TIEMPO TOTAL DISPONIBLE': round(timeAvailable, 2), 'TIEMPO INACTIVO': round(minsInactive, 2), 'MTBF': mtbf}
-
-    return metricas
+    return data

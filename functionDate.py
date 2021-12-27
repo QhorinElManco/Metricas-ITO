@@ -1,8 +1,9 @@
 import time
 from datetime import datetime
+from pytz import timezone
 from dateutil.relativedelta import *
 
-
+zone_local = timezone('America/Tegucigalpa')
 formatTime = '%Y-%m-%d %H:%M:%S'
 
 # Funcion para castear a formato datetime
@@ -11,31 +12,23 @@ formatTime = '%Y-%m-%d %H:%M:%S'
 def formatDate(date):
     date = datetime.strptime(datetime.fromtimestamp(
         int(date)).strftime(formatTime), formatTime)
-    date = date - relativedelta(hours=6)
     return date
 
 # Funcion para castear a formato unixtime
 
 
 def dateUnix(date):
-    return str(int(time.mktime(date.timetuple())))
+    return str(int(date.timestamp()))
+
 
 # Funcion para la fecha actual
 
 
 def currentDate():
-    date = datetime.strptime(datetime.utcnow()
+    date = datetime.strptime(datetime.now(zone_local)
                              .strftime(formatTime), formatTime)
-    date = date - relativedelta(hours=6)
     return date
 
-
-# Funcion para obtener el mes anterior a partir de la una fecha
-# por defecto la calcula con la fecha actual
-
-
-def lastMonth(currentMonth=currentDate()):
-    return (currentMonth - relativedelta(months=1))
 
 # Funcion para calcular la diferencia entre dos fechas en minutos
 
