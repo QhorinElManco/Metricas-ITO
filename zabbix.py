@@ -9,4 +9,4 @@ from pyzabbix.api import ZabbixAPI
 #logger.addHandler(handler)
 
 
-zabbix = ZabbixAPI(url='http://mon.lab.agrega.com:81', user='mpineda', password='Agrega.2021')
+zabbix = ZabbixAPI(url='url_to_zabbix', user='user', password='password')
