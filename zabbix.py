@@ -9,4 +9,4 @@ from pyzabbix.api import ZabbixAPI
 #logger.addHandler(handler)
 
 
-zabbix = ZabbixAPI(url='url_to_zabbix', user='user', password='password')
+zabbix = ZabbixAPI(url='', user='', password='')
